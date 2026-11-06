@@ -17,6 +17,7 @@ from __future__ import annotations
 import time
 
 from visioncite.answer.abstain import should_abstain
+from visioncite.answer.color import dominant_background, dominant_color, find_red_bbox
 from visioncite.answer.extractive import compose_answer
 from visioncite.answer.verify import verify_answer
 from visioncite.answer.vlm import VlmAnswerer, VlmOutput
@@ -25,9 +26,12 @@ from visioncite.index.retrieve import Retrieved, retrieve
 from visioncite.ingest.image import crop_image, to_png_bytes
 from visioncite.logging import get_logger
 from visioncite.pipeline import Document
-from visioncite.types import AnswerResult, Chunk, Citation
+from visioncite.types import AnswerResult, BBox, Chunk, Citation
 
 logger = get_logger("answer.qa")
+
+# 颜色类问题的关键词：命中后走像素统计路径，而不是文本抽取
+_COLOR_KEYWORDS = ("颜色", "什么色", "字体色", "底色", "色调", "色号")
 
 
 def answer_question(
@@ -52,6 +56,12 @@ def answer_question(
     if not question:
         return _abstain("问题为空", started)
 
+    # 颜色属于"视觉属性"，OCR 文本里没有答案，交给像素统计
+    if _is_color_question(question):
+        color_result = _answer_color(document, question, settings, started)
+        if color_result is not None:
+            return color_result
+
     results = retrieve(document, question, settings)
     if not results:
         return _abstain("没有检索到相关证据", started)
@@ -75,6 +85,121 @@ def answer_question(
         latency_ms=(time.perf_counter() - started) * 1000,
         backend=backend_used,
         reasons=reasons,
+    )
+
+
+def _asks_background(question: str) -> bool:
+    """问题是否在问底色/背景色。
+
+    Args:
+        question: 用户问题。
+
+    Returns:
+        True 表示应统计背景像素。
+    """
+    return any(keyword in question for keyword in ("底色", "背景色", "纸张颜色"))
+
+
+def _is_color_question(question: str) -> bool:
+    """判断问题是否在问颜色。
+
+    Args:
+        question: 用户问题。
+
+    Returns:
+        True 表示应按视觉属性回答。
+    """
+    return any(keyword in question for keyword in _COLOR_KEYWORDS)
+
+
+def _answer_color(
+    document: Document,
+    question: str,
+    settings: Settings,
+    started: float,
+) -> AnswerResult | None:
+    """用像素统计回答颜色问题。
+
+    先用 BM25 找到"问的是哪一块"（例如"成绩报告单"对应的那行），
+    再统计这块的墨迹主色；找不到具体区域就退回整页统计。
+
+    Args:
+        document: 文档。
+        question: 问题。
+        settings: 配置。
+        started: 起始时间戳。
+
+    Returns:
+        AnswerResult；拿不到有效统计时返回 None（交回文本路径处理）。
+    """
+    if not document.pages:
+        return None
+
+    results = retrieve(document, question, settings)
+    page_index = 0
+    region = None
+    if results:
+        chunk = results[0].chunk
+        page_index = chunk.page
+        page = document.page(page_index)
+        if page is not None:
+            region = next((item for item in page.regions if item.region_id == chunk.region_id), None)
+
+    page = document.page(page_index)
+    if page is None:
+        return None
+
+    # 问印章时，先定位红色区域；印章是整页里唯一的红块，比"整页主色"准
+    if any(keyword in question for keyword in ("印章", "公章", "盖章", "红章")):
+        seal_box = find_red_bbox(page.image)
+        if seal_box is not None:
+            stat = dominant_color(page.image, seal_box)
+            if stat is not None:
+                citation = Citation(
+                    chunk_id=f"{document.meta.doc_id}:color:seal",
+                    region_id=f"p{page_index}-seal",
+                    page=page_index,
+                    bbox=seal_box,
+                    snippet=f"印章区域主色：{stat.name}",
+                    score=1.0,
+                )
+                return AnswerResult(
+                    answer=f"印章区域是{stat.name}（占该区域墨迹像素 {stat.ratio:.0%}）",
+                    citations=(citation,),
+                    abstained=False,
+                    confidence=min(1.0, 0.6 + 0.4 * min(1.0, stat.ratio / 0.8)),
+                    latency_ms=(time.perf_counter() - started) * 1000,
+                    backend="color",
+                )
+
+    stat = (
+        dominant_background(page.image, region.bbox if region else None)
+        if _asks_background(question)
+        else dominant_color(page.image, region.bbox if region else None)
+    )
+    if stat is None:
+        return _abstain("目标区域没有可统计的像素", started)
+
+    subject = f"「{region.text[:24]}」" if region and region.text else "整页"
+    kind = "底色" if _asks_background(question) else "主色"
+    answer = f"{subject}的{kind}是{stat.name}（占该区域像素 {stat.ratio:.0%}）"
+    bbox = region.bbox if region else BBox(0, 0, page.width, page.height)
+    citation = Citation(
+        chunk_id=f"{document.meta.doc_id}:color:{region.region_id if region else 'page'}",
+        region_id=region.region_id if region else f"p{page_index}-r0",
+        page=page_index,
+        bbox=bbox,
+        snippet=answer,
+        score=1.0,
+    )
+    confidence = min(1.0, 0.55 + 0.45 * min(1.0, stat.ratio / 0.8))
+    return AnswerResult(
+        answer=answer,
+        citations=(citation,),
+        abstained=False,
+        confidence=confidence,
+        latency_ms=(time.perf_counter() - started) * 1000,
+        backend="color",
     )
 
 

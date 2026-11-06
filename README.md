@@ -27,6 +27,9 @@ adds the part that matters in production:
   recall, RRF fusion without score-scale assumptions, MMR de-duplication.
 - **Degrades instead of crashing.** No OCR → PDF text layer only. No CLIP → text-only
   retrieval. No VLM → extractive answers. Every state is reported by `/health`.
+- **Answers visual attributes too.** "What colour is the text / the background / the seal?"
+  is answered by pixel statistics on the cited region (HSV bucketing), not by guessing
+  from OCR text — and the seal question first locates the red region before measuring it.
 
 ## Quick start
 
