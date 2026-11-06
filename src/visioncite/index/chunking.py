@@ -47,7 +47,14 @@ def chunk_region(doc_id: str, page: Page, region: Region, max_chars: int = 240) 
     if not region.text.strip():
         return []
 
-    pieces = _pack(split_sentences(region.text), max_chars) or [region.text.strip()]
+    # 表格按"行"切，且**不要**把多行拼进同一个块：
+    # 表格行没有句末标点，_pack 会把相邻行直接粘在一起（"小计显示器"），
+    # 检索和答案都会变成一大片单元格文本。
+    if region.kind == "table":
+        pieces = _rows_as_chunks(region.text.splitlines(), max_chars)
+    else:
+        pieces = _pack(split_sentences(region.text), max_chars)
+    pieces = pieces or [region.text.strip()]
     return [
         Chunk(
             chunk_id=f"{doc_id}:{region.region_id}:{index}",
@@ -93,6 +100,25 @@ def _pack(sentences: list[str], max_chars: int) -> list[str]:
             current += sentence
     if current.strip():
         chunks.append(current.strip())
+    return chunks
+
+
+def _rows_as_chunks(rows: list[str], max_chars: int) -> list[str]:
+    """表格行 → 检索块：一行一块，超长行再硬切。
+
+    Args:
+        rows: 表格文本行。
+        max_chars: 单块最大字符数。
+
+    Returns:
+        文本块列表。
+    """
+    chunks: list[str] = []
+    for row in rows:
+        text = row.strip()
+        if not text:
+            continue
+        chunks.extend(_hard_split(text, max_chars) if len(text) > max_chars else [text])
     return chunks
 
 

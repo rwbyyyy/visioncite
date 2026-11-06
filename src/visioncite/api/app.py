@@ -257,12 +257,12 @@ def _to_document_out(document: Document) -> DocumentOut:
     )
 
 
-def app() -> FastAPI:
-    """uvicorn 的工厂入口：``uvicorn visioncite.api.app:app``。"""
-    return create_app()
+# 模块级实例：`uvicorn visioncite.api.app:app` 直接可用，且不会触发
+# "ASGI app factory detected" 警告（提示是给"导出的是工厂函数"的场景用的）。
+app = create_app()
 
 
 if __name__ == "__main__":  # pragma: no cover
     import uvicorn
 
-    uvicorn.run("visioncite.api.app:app", host="127.0.0.1", port=8080, reload=False)
+    uvicorn.run(app, host="127.0.0.1", port=8080, reload=False)
