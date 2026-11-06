@@ -94,9 +94,15 @@ def _register_document_routes(app: FastAPI) -> None:
     """
 
     @app.post("/api/documents", response_model=DocumentOut)
-    async def upload(file: UploadFile = File(...)) -> DocumentOut:
-        """上传并解析文档；同一内容重复上传会直接复用。"""
-        data = await file.read()
+    def upload(file: UploadFile = File(...)) -> DocumentOut:
+        """上传并解析文档；同一内容重复上传会直接复用。
+
+        刻意写成**同步**函数：解析是 CPU 密集的（OCR + 版面 + 编码），
+        FastAPI 会把同步路由丢进线程池，事件循环因此不会被阻塞，
+        解析大文件时 /health 与页面资源仍然可访问。
+        （实测：写成 async def 并直接调用解析，上传期间 /health 会超时。）
+        """
+        data = file.file.read()
         limit = app.state.settings.max_upload_mb * 1024 * 1024
         if len(data) > limit:
             raise HTTPException(status_code=413, detail=f"文件超过 {app.state.settings.max_upload_mb}MB")
