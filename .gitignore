@@ -1,0 +1,41 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ---- 本项目的本地产物 ----
+# 上传的文档、抽取的页面图、索引缓存都不进仓库
+.data/
+storage/
+*.log
+
+# ---- 模型权重（体积大，绝不提交）----
+models/
+*.safetensors
+*.bin
+*.onnx
+!tests/**/*.onnx
+
+# ---- 评测产出的中间图 ----
+reports/**/*.png
+corpus/raw/
+
+# ---- 编辑器 / 系统 ----
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---- 秘密（永远不要提交）----
+.env
+.env.*
+!.env.example

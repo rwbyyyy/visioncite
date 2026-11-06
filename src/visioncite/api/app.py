@@ -1,0 +1,262 @@
+"""FastAPI 服务：把问答能力暴露成 HTTP 接口 + 一个最小可用的网页。
+
+分层：
+    路由层（本文件）只做三件事：校验输入、调用用例、把结果/异常翻译成 HTTP。
+    业务逻辑全部在 pipeline / answer 里，因此路由函数很薄，也好测。
+
+存储：进程内字典。够用于演示与单机部署；多副本部署时应换成 Redis/对象存储，
+这一条写在 docs/ARCHITECTURE.md 的"如果上生产"里。
+
+路由注册被拆成四个小组（文档 / 问答 / 资源 / 页面），
+每个函数只注册一类路由 —— 这样单个函数的圈复杂度不会超标，读起来也分块清晰。
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse, Response
+
+from visioncite.answer.qa import answer_question
+from visioncite.api.schemas import (
+    AskRequest,
+    AskResponse,
+    CitationOut,
+    DocumentOut,
+    HealthOut,
+    PageOut,
+    RegionOut,
+)
+from visioncite.config import Settings
+from visioncite.errors import UnsupportedFileError, VisionCiteError
+from visioncite.ingest.image import crop_image, to_png_bytes
+from visioncite.ingest.loader import detect_kind
+from visioncite.logging import get_logger, setup_logging
+from visioncite.pipeline import Document, build_document, document_id_from_bytes
+
+logger = get_logger("api")
+
+STATIC_DIR = Path(__file__).resolve().parent.parent / "web"
+_VERSION = "0.1.0"
+
+
+def create_app(settings: Settings | None = None) -> FastAPI:
+    """构造应用（工厂模式，方便测试注入不同配置）。
+
+    Args:
+        settings: 配置；None 时从环境变量读取。
+
+    Returns:
+        FastAPI 实例。
+    """
+    setup_logging()
+    config = settings or Settings.from_env()
+    config.ensure_dirs()
+    app = FastAPI(title="VisionCite", version=_VERSION, description="多模态文档问答与证据溯源")
+    app.state.settings = config
+    app.state.documents = {}
+
+    _register_health_routes(app)
+    _register_document_routes(app)
+    _register_asset_routes(app)
+    _register_ui_routes(app)
+    return app
+
+
+def _register_health_routes(app: FastAPI) -> None:
+    """健康检查路由。
+
+    Args:
+        app: FastAPI 实例。
+    """
+
+    @app.get("/health", response_model=HealthOut)
+    def health() -> HealthOut:
+        """报告实际启用的能力与已索引文档数。"""
+        documents: dict[str, Document] = app.state.documents
+        sample = next(iter(documents.values()), None)
+        return HealthOut(
+            status="ok",
+            version=_VERSION,
+            ocr=sample.ocr_name if sample else "unknown",
+            visual=sample.visual_name if sample else "unknown",
+            vlm_enabled=app.state.settings.vlm_enabled,
+            documents=len(documents),
+        )
+
+
+def _register_document_routes(app: FastAPI) -> None:
+    """上传与问答路由。
+
+    Args:
+        app: FastAPI 实例。
+    """
+
+    @app.post("/api/documents", response_model=DocumentOut)
+    async def upload(file: UploadFile = File(...)) -> DocumentOut:
+        """上传并解析文档；同一内容重复上传会直接复用。"""
+        data = await file.read()
+        limit = app.state.settings.max_upload_mb * 1024 * 1024
+        if len(data) > limit:
+            raise HTTPException(status_code=413, detail=f"文件超过 {app.state.settings.max_upload_mb}MB")
+        return _store_document(app, data, file.filename or "upload")
+
+    @app.post("/api/ask", response_model=AskResponse)
+    def ask(request: AskRequest) -> AskResponse:
+        """提问：检索 + 作答 + 校验。"""
+        documents: dict[str, Document] = app.state.documents
+        document = documents.get(request.doc_id)
+        if document is None:
+            raise HTTPException(status_code=404, detail="文档不存在，请先上传")
+        result = answer_question(document, request.question, app.state.settings)
+        return AskResponse(
+            answer=result.answer,
+            abstained=result.abstained,
+            confidence=result.confidence,
+            latency_ms=result.latency_ms,
+            backend=result.backend,
+            citations=[
+                CitationOut(
+                    chunk_id=citation.chunk_id,
+                    region_id=citation.region_id,
+                    page=citation.page,
+                    bbox=citation.bbox.to_list(),
+                    snippet=citation.snippet,
+                    score=citation.score,
+                )
+                for citation in result.citations
+            ],
+            reasons=list(result.reasons),
+        )
+
+
+def _register_asset_routes(app: FastAPI) -> None:
+    """页面图与证据裁图路由。
+
+    Args:
+        app: FastAPI 实例。
+    """
+
+    @app.get("/api/documents/{doc_id}/pages/{page}.png")
+    def page_image(doc_id: str, page: int) -> Response:
+        """返回页面 PNG，供前端叠加高亮框。"""
+        document = app.state.documents.get(doc_id)
+        target = document.page(page) if document else None
+        if target is None:
+            raise HTTPException(status_code=404, detail="页面不存在")
+        return Response(content=to_png_bytes(target.image), media_type="image/png")
+
+    @app.get("/api/documents/{doc_id}/regions/{region_id}.crop")
+    def region_crop(doc_id: str, region_id: str) -> Response:
+        """返回某个区域的裁图（前端引用缩略图）。"""
+        document = app.state.documents.get(doc_id)
+        if document is None:
+            raise HTTPException(status_code=404, detail="文档不存在")
+        for page in document.pages:
+            for region in page.regions:
+                if region.region_id == region_id:
+                    box = region.bbox.pad(8, (page.width, page.height))
+                    return Response(
+                        content=to_png_bytes(crop_image(page.image, box)),
+                        media_type="image/png",
+                    )
+        raise HTTPException(status_code=404, detail="区域不存在")
+
+
+def _register_ui_routes(app: FastAPI) -> None:
+    """静态页面路由。
+
+    Args:
+        app: FastAPI 实例。
+    """
+
+    @app.get("/")
+    def index() -> FileResponse:
+        """返回单页前端。"""
+        return FileResponse(STATIC_DIR / "index.html")
+
+    @app.get("/app.js")
+    def script() -> FileResponse:
+        """前端脚本。"""
+        return FileResponse(STATIC_DIR / "app.js", media_type="text/javascript")
+
+    @app.get("/style.css")
+    def styles() -> FileResponse:
+        """前端样式。"""
+        return FileResponse(STATIC_DIR / "style.css", media_type="text/css")
+
+
+def _store_document(app: FastAPI, data: bytes, filename: str) -> DocumentOut:
+    """把上传字节落盘、解析并放进内存缓存。
+
+    Args:
+        app: FastAPI 实例。
+        data: 文件字节。
+        filename: 原始文件名。
+
+    Returns:
+        DocumentOut。
+
+    Raises:
+        HTTPException: 类型不支持（415）或解析失败（400）。
+    """
+    documents: dict[str, Document] = app.state.documents
+    doc_id = document_id_from_bytes(data)
+    if doc_id in documents:
+        return _to_document_out(documents[doc_id])
+
+    suffix = Path(filename).suffix.lower() or ".bin"
+    target = app.state.settings.work_dir / f"{doc_id}{suffix}"
+    target.write_bytes(data)
+    try:
+        detect_kind(target)
+        document = build_document(target, app.state.settings, doc_id=doc_id)
+    except UnsupportedFileError as exc:
+        raise HTTPException(status_code=415, detail=exc.user_message) from exc
+    except VisionCiteError as exc:
+        raise HTTPException(status_code=400, detail=exc.user_message) from exc
+    documents[doc_id] = document
+    return _to_document_out(document)
+
+
+def _to_document_out(document: Document) -> DocumentOut:
+    """把内部 Document 转成响应模型。
+
+    Args:
+        document: 文档。
+
+    Returns:
+        DocumentOut。
+    """
+    pages = [
+        PageOut(
+            index=page.index,
+            width=page.width,
+            height=page.height,
+            regions=[
+                RegionOut(region_id=region.region_id, kind=region.kind, bbox=region.bbox.to_list())
+                for region in page.regions
+            ],
+        )
+        for page in document.pages
+    ]
+    return DocumentOut(
+        doc_id=document.meta.doc_id,
+        filename=document.meta.filename,
+        page_count=document.meta.page_count,
+        ocr=document.ocr_name,
+        visual=document.visual_name,
+        pages=pages,
+    )
+
+
+def app() -> FastAPI:
+    """uvicorn 的工厂入口：``uvicorn visioncite.api.app:app``。"""
+    return create_app()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    import uvicorn
+
+    uvicorn.run("visioncite.api.app:app", host="127.0.0.1", port=8080, reload=False)

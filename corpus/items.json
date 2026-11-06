@@ -1,0 +1,476 @@
+{
+  "total": 36,
+  "answerable": 28,
+  "by_category": {
+    "chart": 8,
+    "invoice": 10,
+    "slide": 10,
+    "table": 8
+  },
+  "items": [
+    {
+      "id": "invoice-0-q0",
+      "file": "images/invoice-0.png",
+      "question": "发票号码是多少？",
+      "answer": "INV-2026-100",
+      "citation": [
+        70,
+        178,
+        374,
+        201
+      ],
+      "answerable": true,
+      "category": "invoice"
+    },
+    {
+      "id": "invoice-0-q1",
+      "file": "images/invoice-0.png",
+      "question": "开票日期是哪一天？",
+      "answer": "2026-10-25",
+      "citation": [
+        70,
+        237,
+        342,
+        262
+      ],
+      "answerable": true,
+      "category": "invoice"
+    },
+    {
+      "id": "invoice-0-q2",
+      "file": "images/invoice-0.png",
+      "question": "合计金额是多少元？",
+      "answer": "1,286.40",
+      "citation": [
+        70,
+        566,
+        336,
+        592
+      ],
+      "answerable": true,
+      "category": "invoice"
+    },
+    {
+      "id": "invoice-0-q3",
+      "file": "images/invoice-0.png",
+      "question": "购买方是谁？",
+      "answer": "浙江大学",
+      "citation": [
+        70,
+        296,
+        278,
+        322
+      ],
+      "answerable": true,
+      "category": "invoice"
+    },
+    {
+      "id": "invoice-0-q4",
+      "file": "images/invoice-0.png",
+      "question": "这张发票的税额是多少？",
+      "answer": "",
+      "citation": null,
+      "answerable": false,
+      "category": "invoice"
+    },
+    {
+      "id": "invoice-1-q0",
+      "file": "images/invoice-1.png",
+      "question": "发票号码是多少？",
+      "answer": "INV-2026-101",
+      "citation": [
+        70,
+        178,
+        374,
+        201
+      ],
+      "answerable": true,
+      "category": "invoice"
+    },
+    {
+      "id": "invoice-1-q1",
+      "file": "images/invoice-1.png",
+      "question": "开票日期是哪一天？",
+      "answer": "2026-10-25",
+      "citation": [
+        70,
+        237,
+        342,
+        262
+      ],
+      "answerable": true,
+      "category": "invoice"
+    },
+    {
+      "id": "invoice-1-q2",
+      "file": "images/invoice-1.png",
+      "question": "合计金额是多少元？",
+      "answer": "1,286.40",
+      "citation": [
+        70,
+        566,
+        336,
+        592
+      ],
+      "answerable": true,
+      "category": "invoice"
+    },
+    {
+      "id": "invoice-1-q3",
+      "file": "images/invoice-1.png",
+      "question": "购买方是谁？",
+      "answer": "浙江大学",
+      "citation": [
+        70,
+        296,
+        278,
+        322
+      ],
+      "answerable": true,
+      "category": "invoice"
+    },
+    {
+      "id": "invoice-1-q4",
+      "file": "images/invoice-1.png",
+      "question": "这张发票的税额是多少？",
+      "answer": "",
+      "citation": null,
+      "answerable": false,
+      "category": "invoice"
+    },
+    {
+      "id": "table-0-q0",
+      "file": "images/table-0.png",
+      "question": "显示器卖了多少台？",
+      "answer": "12",
+      "citation": [
+        70,
+        200,
+        930,
+        550
+      ],
+      "answerable": true,
+      "category": "table"
+    },
+    {
+      "id": "table-0-q1",
+      "file": "images/table-0.png",
+      "question": "打印机的单价是多少？",
+      "answer": "643.20",
+      "citation": [
+        70,
+        200,
+        930,
+        550
+      ],
+      "answerable": true,
+      "category": "table"
+    },
+    {
+      "id": "table-0-q2",
+      "file": "images/table-0.png",
+      "question": "合计金额是多少元？",
+      "answer": "15944.40",
+      "citation": [
+        70,
+        200,
+        930,
+        550
+      ],
+      "answerable": true,
+      "category": "table"
+    },
+    {
+      "id": "table-0-q3",
+      "file": "images/table-0.png",
+      "question": "哪个产品的退货最多？",
+      "answer": "",
+      "citation": null,
+      "answerable": false,
+      "category": "table"
+    },
+    {
+      "id": "table-1-q0",
+      "file": "images/table-1.png",
+      "question": "显示器卖了多少台？",
+      "answer": "12",
+      "citation": [
+        70,
+        200,
+        930,
+        550
+      ],
+      "answerable": true,
+      "category": "table"
+    },
+    {
+      "id": "table-1-q1",
+      "file": "images/table-1.png",
+      "question": "打印机的单价是多少？",
+      "answer": "643.20",
+      "citation": [
+        70,
+        200,
+        930,
+        550
+      ],
+      "answerable": true,
+      "category": "table"
+    },
+    {
+      "id": "table-1-q2",
+      "file": "images/table-1.png",
+      "question": "合计金额是多少元？",
+      "answer": "15944.40",
+      "citation": [
+        70,
+        200,
+        930,
+        550
+      ],
+      "answerable": true,
+      "category": "table"
+    },
+    {
+      "id": "table-1-q3",
+      "file": "images/table-1.png",
+      "question": "哪个产品的退货最多？",
+      "answer": "",
+      "citation": null,
+      "answerable": false,
+      "category": "table"
+    },
+    {
+      "id": "chart-0-q0",
+      "file": "images/chart-0.png",
+      "question": "10 月的访问量是多少？",
+      "answer": "21 万次",
+      "citation": [
+        70,
+        856,
+        328,
+        882
+      ],
+      "answerable": true,
+      "category": "chart"
+    },
+    {
+      "id": "chart-0-q1",
+      "file": "images/chart-0.png",
+      "question": "9 月的访问量是多少？",
+      "answer": "25 万次",
+      "citation": [
+        70,
+        916,
+        313,
+        942
+      ],
+      "answerable": true,
+      "category": "chart"
+    },
+    {
+      "id": "chart-0-q2",
+      "file": "images/chart-0.png",
+      "question": "8 月的访问量是多少？",
+      "answer": "18 万次",
+      "citation": [
+        70,
+        976,
+        313,
+        1002
+      ],
+      "answerable": true,
+      "category": "chart"
+    },
+    {
+      "id": "chart-0-q3",
+      "file": "images/chart-0.png",
+      "question": "访问量的同比增速是多少？",
+      "answer": "",
+      "citation": null,
+      "answerable": false,
+      "category": "chart"
+    },
+    {
+      "id": "chart-1-q0",
+      "file": "images/chart-1.png",
+      "question": "10 月的访问量是多少？",
+      "answer": "21 万次",
+      "citation": [
+        70,
+        856,
+        328,
+        882
+      ],
+      "answerable": true,
+      "category": "chart"
+    },
+    {
+      "id": "chart-1-q1",
+      "file": "images/chart-1.png",
+      "question": "9 月的访问量是多少？",
+      "answer": "25 万次",
+      "citation": [
+        70,
+        916,
+        313,
+        942
+      ],
+      "answerable": true,
+      "category": "chart"
+    },
+    {
+      "id": "chart-1-q2",
+      "file": "images/chart-1.png",
+      "question": "8 月的访问量是多少？",
+      "answer": "18 万次",
+      "citation": [
+        70,
+        976,
+        313,
+        1002
+      ],
+      "answerable": true,
+      "category": "chart"
+    },
+    {
+      "id": "chart-1-q3",
+      "file": "images/chart-1.png",
+      "question": "访问量的同比增速是多少？",
+      "answer": "",
+      "citation": null,
+      "answerable": false,
+      "category": "chart"
+    },
+    {
+      "id": "slide-0-q0",
+      "file": "images/slide-0.png",
+      "question": "检索部分用了什么方法？",
+      "answer": "BM25 与 CLIP",
+      "citation": [
+        110,
+        246,
+        467,
+        272
+      ],
+      "answerable": true,
+      "category": "slide"
+    },
+    {
+      "id": "slide-0-q1",
+      "file": "images/slide-0.png",
+      "question": "答案引用精确到什么？",
+      "answer": "区域框",
+      "citation": [
+        110,
+        365,
+        448,
+        392
+      ],
+      "answerable": true,
+      "category": "slide"
+    },
+    {
+      "id": "slide-0-q2",
+      "file": "images/slide-0.png",
+      "question": "ECE 是多少？",
+      "answer": "0.19",
+      "citation": [
+        110,
+        486,
+        434,
+        512
+      ],
+      "answerable": true,
+      "category": "slide"
+    },
+    {
+      "id": "slide-0-q3",
+      "file": "images/slide-0.png",
+      "question": "部署用了什么框架？",
+      "answer": "FastAPI",
+      "citation": [
+        110,
+        606,
+        418,
+        632
+      ],
+      "answerable": true,
+      "category": "slide"
+    },
+    {
+      "id": "slide-0-q4",
+      "file": "images/slide-0.png",
+      "question": "项目的预算缺口是多少？",
+      "answer": "",
+      "citation": null,
+      "answerable": false,
+      "category": "slide"
+    },
+    {
+      "id": "slide-1-q0",
+      "file": "images/slide-1.png",
+      "question": "检索部分用了什么方法？",
+      "answer": "BM25 与 CLIP",
+      "citation": [
+        110,
+        246,
+        467,
+        272
+      ],
+      "answerable": true,
+      "category": "slide"
+    },
+    {
+      "id": "slide-1-q1",
+      "file": "images/slide-1.png",
+      "question": "答案引用精确到什么？",
+      "answer": "区域框",
+      "citation": [
+        110,
+        365,
+        448,
+        392
+      ],
+      "answerable": true,
+      "category": "slide"
+    },
+    {
+      "id": "slide-1-q2",
+      "file": "images/slide-1.png",
+      "question": "ECE 是多少？",
+      "answer": "0.19",
+      "citation": [
+        110,
+        486,
+        434,
+        512
+      ],
+      "answerable": true,
+      "category": "slide"
+    },
+    {
+      "id": "slide-1-q3",
+      "file": "images/slide-1.png",
+      "question": "部署用了什么框架？",
+      "answer": "FastAPI",
+      "citation": [
+        110,
+        606,
+        418,
+        632
+      ],
+      "answerable": true,
+      "category": "slide"
+    },
+    {
+      "id": "slide-1-q4",
+      "file": "images/slide-1.png",
+      "question": "项目的预算缺口是多少？",
+      "answer": "",
+      "citation": null,
+      "answerable": false,
+      "category": "slide"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VisionCite · 多模态文档问答</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">VisionCite<span>证源</span></div>
+    <div class="tagline">上传文档 → 提问 → 答案带证据框</div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <h2>1. 上传</h2>
+      <div id="dropzone" class="dropzone">
+        <input id="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" hidden />
+        <p>拖入 PDF / 图片，或 <button id="pick" class="link">选择文件</button></p>
+        <p class="hint">首次解析会加载 OCR 模型，通常几秒钟</p>
+      </div>
+      <p id="docinfo" class="muted"></p>
+      <div id="pagewrap" class="pagewrap hidden">
+        <img id="pageimg" alt="文档页面" />
+        <div id="overlay" class="overlay"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>2. 提问</h2>
+      <form id="askform" class="askform">
+        <input id="question" type="text" placeholder="例如：合计金额是多少？" autocomplete="off" />
+        <button type="submit">提问</button>
+      </form>
+      <div id="answer" class="answer hidden">
+        <div id="answertext" class="answertext"></div>
+        <div id="meta" class="muted"></div>
+        <div id="citations" class="citations"></div>
+      </div>
+      <p class="hint">没有足够证据时，系统会弃答而不是编造。</p>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
