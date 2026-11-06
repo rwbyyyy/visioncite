@@ -172,6 +172,10 @@ def _answer_color(
                     backend="color",
                 )
 
+    # 问"底色"通常指整张纸，而不是某行字所在的区域
+    if _asks_background(question):
+        region = None
+
     stat = (
         dominant_background(page.image, region.bbox if region else None)
         if _asks_background(question)
