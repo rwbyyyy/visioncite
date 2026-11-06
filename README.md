@@ -61,9 +61,13 @@ CPU-only, `python -m visioncite.eval.run --mode all`. Full report: [`reports/`](
 
 | Mode | Coverage | AnswerAcc | Cite-P | Cite-R | AbstainAcc | ECE | p50 | p95 |
 |---|---|---|---|---|---|---|---|---|
-| page (no layout) | 0.83 | 1.00 | 0.00 | 0.00 | 0.83 | 0.18 | 1 ms | 1 ms |
-| layout (XY-cut + BM25) | 0.78 | 1.00 | 0.85 | 1.00 | 0.89 | 0.19 | 0 ms | 1 ms |
-| hybrid (+ CLIP) | 0.78 | 1.00 | 0.85 | 1.00 | 0.89 | 0.19 | 30 ms | 41 ms |
+| page (no layout) | 0.83 | 0.62 | 0.00 | 0.00 | 0.83 | 0.34 | 1 ms | 1 ms |
+| layout (XY-cut + BM25) | 0.78 | 1.00 | 0.85 | 1.00 | 0.89 | 0.17 | 0 ms | 2 ms |
+| hybrid (+ CLIP) | 0.78 | 1.00 | 0.85 | 1.00 | 0.89 | 0.17 | 30 ms | 33 ms |
+
+Numbers instead of whole lines: the extractive backend now answers with the **value**
+("88", "21 万次") when the question asks for one, using the table header to pick the
+right column and skipping ID-like codes such as `INV-2026-100`.
 
 Reading these honestly:
 

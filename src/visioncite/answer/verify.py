@@ -83,9 +83,14 @@ def lexical_support(answer: str, evidence_texts: list[str]) -> float:
     Returns:
         0~1；答案为空时返回 0。
     """
-    answer_tokens = [token for token in tokenize(answer) if not token.isdigit()]
+    answer_tokens = tokenize(answer)
     if not answer_tokens:
         return 0.0
+    # 纯数字答案（"88"、"1,286.40"）的词面支撑没有意义：
+    # 数字是否可信由 numbers_supported 单独校验，这里直接算通过，
+    # 否则"数字型答案"会被词面规则误杀。
+    if all(token.isdigit() or token.replace(".", "").isdigit() for token in answer_tokens):
+        return 1.0
     evidence_tokens: set[str] = set()
     for text in evidence_texts:
         evidence_tokens.update(tokenize(text))

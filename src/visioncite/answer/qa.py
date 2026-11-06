@@ -19,6 +19,7 @@ import time
 from visioncite.answer.abstain import should_abstain
 from visioncite.answer.color import dominant_background, dominant_color, find_red_bbox
 from visioncite.answer.extractive import compose_answer
+from visioncite.answer.values import asks_for_value, extract_value, split_cells
 from visioncite.answer.verify import verify_answer
 from visioncite.answer.vlm import VlmAnswerer, VlmOutput
 from visioncite.config import Settings
@@ -237,7 +238,82 @@ def _compose(
             logger.exception("VLM 调用失败，回退 extractive")
 
     answer, cited, confidence = compose_answer(question, chunks)
+    answer, confidence = _refine_value(document, question, answer, cited, confidence)
     return answer, cited, confidence, "extractive"
+
+
+def _refine_value(
+    document: Document,
+    question: str,
+    answer: str,
+    cited: list[Chunk],
+    confidence: float,
+) -> tuple[str, float]:
+    """如果用户在问具体数值，把整行答案收敛成那个值。
+
+    Args:
+        document: 文档（用于找同区域的表头）。
+        question: 用户问题。
+        answer: 抽取式答案。
+        cited: 引用的块。
+        confidence: 原置信度。
+
+    Returns:
+        ``(收敛后的答案, 调整后的置信度)``。
+    """
+    if not asks_for_value(question) or not answer:
+        return answer, confidence
+    header = _header_for(document, cited[0]) if cited else None
+    value = extract_value(question, answer, header)
+    if not value or value == answer:
+        return answer, confidence
+    return value, min(1.0, confidence + 0.1)
+
+
+def _header_for(document: Document, chunk: Chunk) -> str | None:
+    """找同一表格区域的表头行（区域里的第一块）。
+
+    Args:
+        document: 文档。
+        chunk: 数据行块。
+
+    Returns:
+        表头文本；找不到返回 None。
+    """
+    prefix = f"{document.meta.doc_id}:{chunk.region_id}:"
+    for candidate in document.chunks:
+        if candidate.chunk_id == chunk.chunk_id:
+            continue
+        if candidate.chunk_id.startswith(prefix) and candidate.chunk_id.endswith(":0"):
+            return candidate.text
+    return _find_table_header(document, chunk)
+
+
+def _find_table_header(document: Document, chunk: Chunk) -> str | None:
+    """跨区域找表头：表格每一行可能被切成独立区域，表头不一定同区域。
+
+    判据：与数据行**列数相同**、且几乎不含数字的行，视为表头。
+
+    Args:
+        document: 文档。
+        chunk: 数据行块。
+
+    Returns:
+        表头文本；找不到返回 None。
+    """
+    columns = len([cell for cell in split_cells(chunk.text) if cell])
+    if columns < 2:
+        return None
+    for candidate in document.chunks:
+        if candidate.chunk_id == chunk.chunk_id:
+            continue
+        cells = split_cells(candidate.text)
+        if len(cells) != columns:
+            continue
+        numeric = sum(1 for cell in cells if cell and cell.replace(".", "").isdigit())
+        if numeric <= 1 and any(cell and not cell.replace(".", "").isdigit() for cell in cells):
+            return candidate.text
+    return None
 
 
 def _call_vlm(
