@@ -58,6 +58,8 @@ ignore = ["D203", "D213", "D413", "D415", "D403", "ANN401"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D", "ANN", "N806"]
 "**/__init__.py" = ["D104"]
+# 实验脚本：一次性/面向 ML 库（transformers 无类型），不套用库代码的严格规则
+"experiments/*" = ["D", "ANN", "E501"]
 # FastAPI 的 File(...)/Depends(...) 必须写在参数默认值里，这是框架约定
 "src/visioncite/api/app.py" = ["B008"]
 
