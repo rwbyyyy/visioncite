@@ -119,6 +119,7 @@ regression harness, not a claim about real scanned documents (see [docs/LIMITATI
 
 | File | Contents |
 |---|---|
+| [docs/LEARNING_PATH.md](docs/LEARNING_PATH.md) | 7-day path from zero to explaining every design decision |
 | [docs/CURRICULUM.md](docs/CURRICULUM.md) | 12-lesson course: theory → code → hand-worked example → exercises |
 | [docs/CODE_TOUR.md](docs/CODE_TOUR.md) | 8-stop reading path through the codebase |
 | [docs/EXERCISES.md](docs/EXERCISES.md) | 12 hands-on changes with acceptance criteria |

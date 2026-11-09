@@ -67,6 +67,7 @@ visioncite serve --port 8080
 
 | 文件 | 内容 |
 |---|---|
+| [docs/LEARNING_PATH.md](docs/LEARNING_PATH.md) | 7 天从零到能讲清每个设计决定 |
 | [docs/CURRICULUM.md](docs/CURRICULUM.md) | 12 讲：原理 → 代码 → 手算例子 → 自测 |
 | [docs/CODE_TOUR.md](docs/CODE_TOUR.md) | 8 站代码阅读路线 |
 | [docs/EXERCISES.md](docs/EXERCISES.md) | 12 个动手练习（含验收标准） |
