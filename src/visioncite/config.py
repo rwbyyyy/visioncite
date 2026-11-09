@@ -92,6 +92,10 @@ class Settings:
     vlm_base_url: str = ""
     vlm_model: str = ""
 
+    llm_base_url: str = ""
+    llm_model: str = ""
+    agent_max_steps: int = 4
+
     @classmethod
     def from_env(cls) -> Settings:
         """从环境变量构造配置。
@@ -117,6 +121,9 @@ class Settings:
             hf_endpoint=_env_str("VISIONCITE_HF_ENDPOINT", "https://hf-mirror.com"),
             vlm_base_url=_env_str("VISIONCITE_VLM_BASE_URL", ""),
             vlm_model=_env_str("VISIONCITE_VLM_MODEL", ""),
+            llm_base_url=_env_str("VISIONCITE_LLM_BASE_URL", ""),
+            llm_model=_env_str("VISIONCITE_LLM_MODEL", ""),
+            agent_max_steps=_env_int("VISIONCITE_AGENT_MAX_STEPS", 4),
         )
 
     @property
@@ -133,6 +140,11 @@ class Settings:
     def vlm_enabled(self) -> bool:
         """是否配置了可选 VLM。未配置时走纯离线的 extractive 路径。"""
         return bool(self.vlm_base_url and self.vlm_model)
+
+    @property
+    def llm_enabled(self) -> bool:
+        """是否配置了 Agent 用的 LLM。未配置时 CLI 退回 fake provider。"""
+        return bool(self.llm_base_url and self.llm_model)
 
     def ensure_dirs(self) -> None:
         """创建运行所需目录（幂等，可重复调用）。"""

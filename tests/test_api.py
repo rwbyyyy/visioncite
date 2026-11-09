@@ -117,3 +117,21 @@ def test_index_page(client: TestClient) -> None:
     response = client.get("/")
     assert response.status_code == 200
     assert "VisionCite" in response.text
+
+
+def test_agent_endpoint_returns_trace(
+    client: TestClient, document_path: tuple[Path, list[Word]]
+) -> None:
+    """Agent 接口返回答案、引用与工具轨迹（未配置 LLM 时用 fake）。"""
+    path, _ = document_path
+    doc_id = client.post(
+        "/api/documents",
+        files={"file": ("page.png", path.read_bytes(), "image/png")},
+    ).json()["doc_id"]
+    response = client.post("/api/agent", json={"doc_id": doc_id, "question": "合计金额是多少？"})
+    assert response.status_code == 200
+    body = response.json()
+    assert not body["abstained"]
+    assert body["steps"] and body["steps"][0]["tool"] == "search_document"
+    assert body["citations"]
+    assert body["tokens"] > 0

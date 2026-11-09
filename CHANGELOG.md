@@ -1,5 +1,16 @@
 # 更新日志
 
+## v0.2（2026-11-09）
+
+- **Agent**：最小工具调用循环（LLM 选工具 → 执行 → 结果回灌 → 终止）；引用只能来自工具真正返回的
+  `chunk_id`，最终答案仍走数字一致性/词面支撑校验；模型失败自动回退抽取式。
+- **工具层**：`search_document` / `get_region` / `list_pages` / `dominant_color`，带参数校验与错误回传。
+- **LLM 抽象**：`LLMProvider` 接口 + `FakeProvider`（离线演示/测试）+ OpenAI 兼容客户端（未在真实端点验证）。
+- **MCP**：stdio + JSON-RPC 2.0 的最小 Server/Client（initialize / tools/list / tools/call / ping），
+  同一套工具可被外部宿主发现与调用。
+- **接口**：新增 `POST /api/agent`，返回答案、引用与工具执行轨迹。
+- **测试**：118 → 119 个用例（新增 LLM/工具/Agent/MCP 四组）。
+
 ## 未发布
 
 - **数值收敛**：问"成绩多少/单价多少"时返回具体值而不是整行；

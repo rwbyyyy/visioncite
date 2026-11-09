@@ -71,10 +71,20 @@ visioncite serve --port 8080
 | [docs/CODE_TOUR.md](docs/CODE_TOUR.md) | 8 站代码阅读路线 |
 | [docs/EXERCISES.md](docs/EXERCISES.md) | 12 个动手练习（含验收标准） |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 分层、数据流、上生产要改什么 |
+| [docs/AGENT_MCP.md](docs/AGENT_MCP.md) | 工具调用循环、fake provider、MCP 子集 |
 | [docs/EVALUATION.md](docs/EVALUATION.md) | 指标定义与复现方式 |
 | [docs/INTERVIEW.md](docs/INTERVIEW.md) | 30 个面试深挖问答（带代码位置） |
 | [docs/RESUME.md](docs/RESUME.md) | 简历 bullet 与口径说明 |
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | 已知边界 |
+
+## Agent 与 MCP（v0.2）
+
+- `agent/`：不依赖 LangChain 的最小工具调用循环，模型选工具、运行时执行、结果回灌；
+  答案引用只能来自工具返回过的 `chunk_id`。
+- `tools/`：`search_document`、`get_region`、`list_pages`、`dominant_color`。
+- `mcp/`：把同一套工具通过 MCP（stdio + JSON-RPC 2.0）暴露出去，支持
+  `initialize` / `tools/list` / `tools/call` / `ping`，细节见 [docs/AGENT_MCP.md](docs/AGENT_MCP.md)。
+- 离线演示（无需 API key）：`visioncite agent corpus/images/invoice-0.png "合计金额是多少？" --fake`
 
 ## 不在范围内
 

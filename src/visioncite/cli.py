@@ -75,6 +75,37 @@ def _serve(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def _agent(args: argparse.Namespace, settings: Settings) -> int:
+    """用 Agent 回答并打印执行轨迹。
+
+    Args:
+        args: 命令行参数。
+        settings: 配置。
+
+    Returns:
+        退出码。
+    """
+    from visioncite.agent.loop import run_agent
+    from visioncite.llm.factory import create_provider
+    from visioncite.llm.fake import FakeProvider
+
+    document = build_document(Path(args.path), settings)
+    provider = FakeProvider() if args.fake else create_provider(settings)
+    result = run_agent(
+        document, args.question, settings, provider=provider, max_steps=args.max_steps
+    )
+    if result.abstained:
+        print(f"弃答：{'；'.join(result.reasons)}")
+        return 1
+    print(f"答案：{result.answer}")
+    print(f"后端：{result.backend}  token：{result.usage.total_tokens}")
+    for step in result.steps:
+        print(f"  [工具] {step.name}({step.arguments}) -> {step.result[:80]}")
+    for citation in result.citations:
+        print(f"  证据：第 {citation.page + 1} 页 {citation.bbox.to_list()} · {citation.snippet[:40]}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """构造参数解析器。
 
@@ -97,6 +128,13 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8080)
     serve.set_defaults(handler=_serve)
+
+    agent = sub.add_parser("agent", help="用工具调用式 Agent 回答问题")
+    agent.add_argument("path")
+    agent.add_argument("question")
+    agent.add_argument("--max-steps", type=int, default=4)
+    agent.add_argument("--fake", action="store_true", help="强制使用 fake provider（无需 API key）")
+    agent.set_defaults(handler=_agent)
     return parser
 
 

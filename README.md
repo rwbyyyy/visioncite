@@ -89,11 +89,18 @@ regression harness, not a claim about real scanned documents (see [docs/LIMITATI
 |---|---|---|
 | POST | `/api/documents` | upload PDF/image → `doc_id`, pages, regions |
 | POST | `/api/ask` | `{doc_id, question}` → answer + citations + confidence |
+| POST | `/api/agent` | tool-calling agent → answer + citations + execution trace |
 | GET | `/api/documents/{id}/pages/{n}.png` | page image |
 | GET | `/api/documents/{id}/regions/{rid}.crop` | evidence crop |
 | GET | `/health` | which backends are actually active |
 
 ## Design notes
+
+- **Agent (v0.2)** — a minimal tool-calling loop: the model chooses tools, the runtime executes
+  them, results are fed back, and citations come only from `chunk_id`s tools actually returned.
+  Offline demo: `visioncite agent corpus/images/invoice-0.png "合计金额是多少？" --fake`.
+- **MCP (v0.2)** — the same tools are exposed over MCP (stdio + JSON-RPC 2.0): `initialize`,
+  `tools/list`, `tools/call`, `ping`. Deliberately a subset; see [docs/AGENT_MCP.md](docs/AGENT_MCP.md).
 
 - **Layout** — Otsu binarisation, recursive XY-cut on ink projections, table detection from
   page-spanning rule lines. No deep model, no GPU, fully explainable; limitation is skew and
@@ -116,6 +123,7 @@ regression harness, not a claim about real scanned documents (see [docs/LIMITATI
 | [docs/CODE_TOUR.md](docs/CODE_TOUR.md) | 8-stop reading path through the codebase |
 | [docs/EXERCISES.md](docs/EXERCISES.md) | 12 hands-on changes with acceptance criteria |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | layering, data flow, production gaps |
+| [docs/AGENT_MCP.md](docs/AGENT_MCP.md) | tool-calling loop, fake provider, MCP subset |
 | [docs/EVALUATION.md](docs/EVALUATION.md) | metric definitions and how to reproduce |
 | [docs/INTERVIEW.md](docs/INTERVIEW.md) | 30 deep-dive Q&A with code pointers |
 | [docs/RESUME.md](docs/RESUME.md) | resume bullets with explicit caveats |

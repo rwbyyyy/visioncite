@@ -20,6 +20,9 @@ from fastapi.responses import FileResponse, Response
 
 from visioncite.answer.qa import answer_question
 from visioncite.api.schemas import (
+    AgentAskRequest,
+    AgentAskResponse,
+    AgentStepOut,
     AskRequest,
     AskResponse,
     CitationOut,
@@ -38,7 +41,7 @@ from visioncite.pipeline import Document, build_document, document_id_from_bytes
 logger = get_logger("api")
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "web"
-_VERSION = "0.1.0"
+_VERSION = "0.2.0"
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -59,6 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     _register_health_routes(app)
     _register_document_routes(app)
+    _register_agent_routes(app)
     _register_asset_routes(app)
     _register_ui_routes(app)
     return app
@@ -133,6 +137,51 @@ def _register_document_routes(app: FastAPI) -> None:
                 )
                 for citation in result.citations
             ],
+            reasons=list(result.reasons),
+        )
+
+
+def _register_agent_routes(app: FastAPI) -> None:
+    """Agent 路由：工具调用式问答。
+
+    Args:
+        app: FastAPI 实例。
+    """
+
+    @app.post("/api/agent", response_model=AgentAskResponse)
+    def agent_ask(request: AgentAskRequest) -> AgentAskResponse:
+        """让 Agent 先用工具检索、再作答，并返回执行轨迹。"""
+        from visioncite.agent.loop import run_agent
+        from visioncite.llm.factory import create_provider
+        from visioncite.llm.fake import FakeProvider
+
+        document = app.state.documents.get(request.doc_id)
+        if document is None:
+            raise HTTPException(status_code=404, detail="文档不存在，请先上传")
+        provider = create_provider(app.state.settings)
+        if isinstance(provider, FakeProvider):
+            provider = FakeProvider()  # 演示模式：每次请求重置脚本
+        result = run_agent(document, request.question, app.state.settings, provider=provider)
+        return AgentAskResponse(
+            answer=result.answer,
+            abstained=result.abstained,
+            citations=[
+                CitationOut(
+                    chunk_id=citation.chunk_id,
+                    region_id=citation.region_id,
+                    page=citation.page,
+                    bbox=citation.bbox.to_list(),
+                    snippet=citation.snippet,
+                    score=citation.score,
+                )
+                for citation in result.citations
+            ],
+            steps=[
+                AgentStepOut(tool=step.name, arguments=dict(step.arguments), result=step.result[:200])
+                for step in result.steps
+            ],
+            tokens=result.usage.total_tokens,
+            backend=result.backend,
             reasons=list(result.reasons),
         )
 

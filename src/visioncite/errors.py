@@ -67,3 +67,12 @@ class VerificationError(VisionCiteError):
     """
 
     default_user_message = "没有找到足够可靠的证据，因此不作回答。"
+
+
+class LLMError(VisionCiteError):
+    """模型调用失败（未配置 key、网络错误、响应格式非法）。
+
+    属于可降级错误：Agent 路径会退回抽取式作答，而不是让请求失败。
+    """
+
+    default_user_message = "智能问答暂不可用，已切换为直接检索作答。"

@@ -79,3 +79,30 @@ class HealthOut(BaseModel):
     visual: str
     vlm_enabled: bool
     documents: int
+
+
+class AgentAskRequest(BaseModel):
+    """Agent 提问请求。"""
+
+    doc_id: str
+    question: str = Field(min_length=1, max_length=500)
+
+
+class AgentStepOut(BaseModel):
+    """Agent 的一步工具调用。"""
+
+    tool: str
+    arguments: dict = {}
+    result: str = ""
+
+
+class AgentAskResponse(BaseModel):
+    """Agent 问答响应。"""
+
+    answer: str
+    abstained: bool
+    citations: list[CitationOut]
+    steps: list[AgentStepOut]
+    tokens: int
+    backend: str
+    reasons: list[str] = []
