@@ -1187,3 +1187,103 @@ python -c "from visioncite.eval.bootstrap import bootstrap_mean_ci; print(bootst
 4. `ingest/image.py` 的 `perceptual_hash()` / `hash_distance()` 与 `ingest/pdf.py` 的 `count_pages()` 已实现但未接入主链路（练习 8 会把 dHash 接进上传去重，并在真实语料上量出它为什么会误判）。
 5. `index/retrieve.py` 对 `pipeline.Document` 的类型依赖让"只导入 answer 层"也要装 `pypdfium2`。
 6. `api/app.py` 的路由注册拆成了 `_register_health_routes` / `_register_document_routes` / `_register_asset_routes` / `_register_ui_routes` 四组，上传的落盘与解析在 `_store_document()` 里；读的时候别在 `upload()` 里找去重逻辑，它只有大小校验一行。
+
+> **v0.2 修订**：上面第 1、2 条已修复（`cli.py` 与 `README.md` 都已存在），并新增 `agent/`、`tools/`、`llm/`、`mcp/` 四层，见下方的第 13 讲。
+
+---
+
+## 第 13 讲（v0.2 增补）工具调用、Agent 与 MCP
+
+### ① 这一讲解决什么问题
+
+前 12 讲的系统是"固定流水线"：检索 → 抽句 → 校验。它只能回答"文档里哪句话包含答案"。
+真实问题常常需要**多步**（先查目录、再翻到某页）或**非文本能力**（这段字什么颜色）。
+这一讲把系统能力包装成工具，让模型自己决定调什么，并把"模型给的答案"重新拉回证据上。
+
+### ② 核心概念与公式
+
+Agent 循环（`agent/loop.py`）：
+
+```text
+messages = [system, user]
+for step in 1..max_steps:
+    resp = provider.chat(messages, tools=registry.specs())
+    if resp 没有 tool_calls:  → 拿到最终答案，跳出
+    messages += [assistant(tool_calls)]
+    for call in tool_calls:
+        result = registry.call(call.name, call.arguments)   # JSON 字符串
+        messages += [tool(name=call.name, tool_call_id=call.id, content=result)]
+        记录 evidence_ids += result.results[].chunk_id
+引用 = evidence_ids 映射成的 Citation（只取工具真正返回过的 id）
+校验 = verify_answer(answer, citations, chunks, min_support=0.35)
+```
+
+工具分发（`tools/base.py`）：
+
+```text
+call(name, args):
+    spec = tools[name]                  # 未知工具 → {"error": ...}
+    missing = required - keys(args)     # 缺参 → {"error": ...}
+    return json(handler(args))          # 抛异常 → {"error": "Type: msg"}
+```
+
+MCP（stdio + JSON-RPC 2.0）：
+
+```text
+请求：{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":..., "arguments":{...}}}
+响应：{"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"<json>"}],"isError":false}}
+通知：无 id → 不响应
+错误码：-32700 解析失败 / -32601 方法不存在 / -32602 参数错
+```
+
+### ③ 对应代码
+
+- `src/visioncite/llm/base.py` — `ChatMessage`、`ToolCall`、`Usage`、`LLMProvider`。
+- `src/visioncite/llm/fake.py` — `FakeProvider`、`tool_call_response()`、`final_response()`、`demo_script()`。
+- `src/visioncite/llm/openai_compat.py` — `OpenAICompatProvider.chat/_parse`、`_to_wire()`、`_parse_call()`。
+- `src/visioncite/tools/base.py` — `ToolSpec`、`ToolRegistry.register/specs/call`、`_missing_required()`。
+- `src/visioncite/tools/document_tools.py` — `build_document_tools()` 与四个工具。
+- `src/visioncite/agent/loop.py` — `run_agent()`、`_evidence_from()`、`_finalize()`、`_fallback()`。
+- `src/visioncite/mcp/protocol.py` / `server.py` / `client.py` — 协议、服务端分发、客户端与子进程。
+
+### ④ 一个手算小例子
+
+一次问答的工具轨迹（fake provider，`--fake`）：
+
+```text
+step 1: search_document({"query": "合计金额", "top_k": 3})
+        → results[0] = {chunk_id: "edab...:p0-r11:0", page: 1, score: 1.0, text: "合计金额：1,286.40元"}
+step 2: 模型给出 "合计金额：1,286.40 元。"
+引用  = [p0-r11:0, p0-r12:0, p0-r1:0]   （按工具返回顺序取前 3 条）
+校验  = numbers_in(answer)=["1286.40"] ⊆ numbers_in(evidence) ✓
+        lexical_support(answer, evidence) ≥ 0.35 ✓
+结果  = answer 非空、abstained=false、tokens=446
+```
+
+MCP 手算（进程内）：
+
+```text
+client.initialize()      → serverInfo.name = "visioncite"
+client.list_tools()      → ["dominant_color", "get_region", "list_pages", "search_document"]
+client.call_tool("search_document", {"query": "金额"})
+                         → content[0].text 里含 "chunk_id"
+```
+
+复现：
+
+```bash
+visioncite agent corpus/images/invoice-0.png "合计金额是多少？" --fake
+python -m visioncite.mcp list corpus/images/invoice-0.png
+python -m visioncite.mcp call corpus/images/invoice-0.png search_document '{"query":"金额"}'
+```
+
+### ⑤ 自测 3 问
+
+1. **模型能不能自己决定引用哪一块？**
+   要点：只能从工具返回的 `chunk_id` 里选（`_finalize` 只映射这些 id），不能凭空写；这是"可验证引用"的关键。
+
+2. **为什么 fake provider 不是"假功能"？**
+   要点：它验证编排（工具分发、消息拼接、终止、降级），真实模型接上走同一条路径；CI 因此不需要 API key 也能覆盖 Agent 逻辑。
+
+3. **MCP 为什么只做 tools？**
+   要点：项目只需要"工具发现 + 调用"；resources/prompts 没有场景，硬做只会增加未验证代码，已写进 LIMITATIONS。

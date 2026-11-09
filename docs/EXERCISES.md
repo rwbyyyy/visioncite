@@ -302,6 +302,47 @@ ruff check src tests                                 # 风格（行宽 100）
 
 ---
 
+## 练习 13 给 Agent 加一个新工具，并只在一处注册
+
+**对应**：第 13 讲。**目标**：体会"工具是三处复用的"——新增 `page_text`（返回指定页的全部文本），只在 `document_tools.py` 里注册，Agent、HTTP、MCP 应同时可用。
+
+**要改的文件**
+
+- `src/visioncite/tools/document_tools.py`：在 `build_document_tools()` 里 `registry.register(_page_text_tool(document))`；实现返回 `{"page": n, "regions": [{"region_id","text"}]}`，并限制单页最多返回 50 个区域（防止把整份文档塞进上下文）。
+- `tests/test_tools.py`：新增"`page_text` 在 `registry.names` 里""越界页码返回 error"两条用例。
+- `tests/test_mcp.py`：把 `tools/list` 的期望集合更新（这条测试会立刻告诉你"注册表改了"）。
+
+**验收方式**
+
+1. `python -m pytest -q tests/test_tools.py tests/test_mcp.py` 全绿。
+2. `python -m visioncite.mcp list corpus/images/invoice-0.png` 能看到 `page_text`。
+3. `python -m visioncite.mcp call corpus/images/invoice-0.png page_text '{"page":1}'` 返回区域文本。
+4. 在 `run_agent` 的 fake 脚本里加一次 `page_text` 调用，确认轨迹里有它、且引用仍然只来自 `results[].chunk_id`（`page_text` 没有 chunk_id，所以它不产生引用——这就是"证据门槛"）。
+
+**预计耗时**：25–35 分钟。
+
+---
+
+## 练习 14 给 Agent 加"工具调用预算"
+
+**对应**：第 13 讲。**目标**：现在只有 `agent_max_steps` 限制轮数，但同一轮里模型可以一次发多个 tool_call。加一个"每次问答最多执行 N 次工具"的预算，超预算直接弃答并说明原因。
+
+**要改的文件**
+
+- `src/visioncite/agent/loop.py`：`run_agent()` 里维护 `calls_used`；执行前判断 `calls_used >= settings.agent_tool_budget` 就停止并返回 `AgentResult(abstained=True, reasons=("工具调用超预算",))`。
+- `src/visioncite/config.py`：新增 `agent_tool_budget: int = 8` 与 `VISIONCITE_AGENT_TOOL_BUDGET` 映射。
+- `tests/test_agent.py`：新增用例——脚本连续发 `search_document`，预算 2 时应在第二次调用后停止并弃答；现有 `test_agent_stops_at_max_steps` 不得回归。
+
+**验收方式**
+
+1. `python -m pytest -q tests/test_agent.py` 全绿。
+2. 用 `--fake` 跑 CLI，确认 token 统计与轨迹条数在预算内。
+3. 回答一个"预算该定多少"的问题：预算越小越省钱、越容易"查不够就弃答"；用 36 题语料扫 4/8/16 三档，记录 coverage 与 token 均值（当前语料只有部分题需要多次检索，结论会很弱——如实说）。
+
+**预计耗时**：30–40 分钟。
+
+---
+
 ## 附：练习与讲次的对应
 
 | 练习 | 讲 | 主要文件 | 难度 |
@@ -318,5 +359,7 @@ ruff check src tests                                 # 风格（行宽 100）
 | 10 阈值扫描 | 11、12 | `eval/run.py`、`eval/bootstrap.py` | 中高 |
 | 11 单位校验 | 10 | `answer/verify.py` | 中 |
 | 12 新消融模式 | 12 | `eval/run.py` | 低中 |
+| 13 新增工具（三处复用） | 13 | `tools/document_tools.py`、`tests/test_mcp.py` | 低中 |
+| 14 工具调用预算 | 13 | `agent/loop.py`、`config.py` | 中 |
 
 建议顺序：5 → 2 → 7 → 1 → 4 → 9 → 10 → 3 → 11 → 6 → 8 → 12。先做改动面小的（5、2、7）建立信心，再做需要跑三次评测的（1、10），最后做需要 CLIP 的（3、12）。

@@ -3,6 +3,15 @@
 用法：每题先背"一句话回答"，再按"展开"讲两到三层，最后主动扔一个"坑"给面试官。
 所有行号对应当前仓库代码，引用格式为 `路径:起始行-结束行`。
 
+> **v0.2 事实更新（优先按这份说）**
+> - 三档消融已全部跑完：`page` 0.62 / `layout` 1.00 / `hybrid` 1.00（AnswerAcc，可答且已作答），引用 P/R 0.85/1.00，弃答准确率 0.89，ECE 0.17；
+> - 测试 **119 个，已实际执行通过**；`ruff` 零告警；CI 在 Ubuntu + Windows 上通过；
+> - 上传路由已改为**同步函数**（走线程池），上传期间 `/health` 不再阻塞；
+> - `min_citation_score` 已接线、`from_env` 已补齐 BM25/top_k/rrf_k/mmr_lambda 映射、`cli.py` 与全部 `docs/*.md` 已存在；
+> - 新增 `agent/`（工具调用循环）、`tools/`、`llm/`、`mcp/`，对应 Q31–Q33。
+> 下文 Q1–Q30 中"只有 layout 一臂""测试未执行""上传是 async def"等表述是 v0.1 的历史状态，读到时以本段为准。
+
+
 ## 0. 事实基线（先对齐口径，再谈亮点）
 
 仓库里只有一次真实评测：`reports/eval-20261106-134357.md`（与之配套的 `.json` 含 36 条逐样本记录）。
@@ -570,3 +579,54 @@
 - 坑：`templates.py:239` 里那行"评测：60 条样本，ECE 0.08"是**合成幻灯片里的演示文本**，不是项目指标；实际是 36 题、ECE 0.19。被问到要立刻澄清，否则会被当成夸大。
 - 追问"为什么不用公开数据集"：DocVQA/ChartQA 几个 GB、标注框风格不一、CPU 跑不动；自建的核心优势是"证据框完全已知"，能做严格的 IoU 评测。
 - 追问"下一步怎么让数字可信"：扩规模 + 真人扫描件 + 分层 bootstrap + 三臂消融 + 逐类别置信区间，缺一不可。
+
+### Q31. Agent 的引用为什么"不可伪造"？和纯 prompt 套壳差在哪？
+
+**一句话回答**：最终引用只从**工具实际返回过的 `chunk_id`** 里生成，模型只能决定"用不用"，不能决定"引用什么"；纯 prompt 套壳是模型自己在文本里写引用，无法验证。
+
+**展开**：
+- `run_agent()` 执行 `tools.call()` 后把结果回填为 `tool` 消息，同时用 `_evidence_from(result)` 收集 `results[].chunk_id`；
+- 收尾 `_finalize()` 只把这些 id 映射成 `Citation`，模型答案里出现任何其他"引用"都不会被采纳；
+- 引用生成后仍走 `verify_answer(..., min_support=0.35)`：数字一致性 + 词面支撑，不通过就弃答；
+- 失败路径：模型调用异常 → `_fallback()` 回退抽取式，接口不 500；模型反复调工具 → `agent_max_steps` 截断并弃答。
+
+**代码位置**：`src/visioncite/agent/loop.py:44-118`（循环与收尾），`src/visioncite/agent/loop.py:121-133`（证据收集），`src/visioncite/tools/base.py:74-104`（工具分发与错误回传）
+
+**常见坑 / 追问**：
+- 坑：`min_support=0.35` 比抽取式路径（0.5）宽松，是为了容纳模型改写；宽松意味着"更会编"的模型更容易混过去，这是当前的真实取舍。
+- 追问"为什么不把引用写进 prompt 让模型输出"：可以，但必须再用白名单过滤——我们做的正是"过滤后只信工具证据"。
+- 追问"证据会不会过时"：工具每次调用都重新检索当前文档，没有缓存，代价是每轮都付一次检索成本。
+
+### Q32. 工具层怎么设计？为什么工具能被 Agent、HTTP、MCP 三处复用？
+
+**一句话回答**：工具是"输入参数 → JSON 结果"的纯函数 + 一张注册表；Agent、`/api/agent`、MCP server 都只依赖 `ToolRegistry`，所以同一套实现三处复用。
+
+**展开**：
+- `ToolSpec` = name + description（写给模型看）+ JSON Schema 参数 + handler；`ToolRegistry.specs()` 输出 OpenAI function 格式，`call()` 做 required 校验并把异常包成 `{"error": ...}` 回给模型，让模型能自我纠正；
+- 四个工具：`search_document`（复用 BM25+CLIP+RRF）、`get_region`（核对 bbox 与原文）、`list_pages`（结构概览）、`dominant_color`（颜色问题，模型无法从文本推出来）；
+- 复用证据：`agent/loop.py` 直接注入 registry；`api/app.py` 的 `/api/agent` 用同一套；`mcp/server.py` 把 registry 的 specs 转成 MCP 的 `inputSchema`。三者都没有各自的"工具实现"。
+
+**代码位置**：`src/visioncite/tools/base.py:22-104`，`src/visioncite/tools/document_tools.py:19-33`，`src/visioncite/api/app.py:145-190`，`src/visioncite/mcp/server.py:60-96`
+
+**常见坑 / 追问**：
+- 坑：`_missing_required` 只校验 required，不校验类型；模型传 `top_k="三"` 会在 handler 里抛 `ValueError`，被包装成 error 回传——能用，但错误信息对模型不够友好。
+- 追问"工具结果为什么要 JSON 字符串"：tool 消息在协议里就是字符串；结构化对象要先序列化，否则不同厂商的 SDK 行为不一致。
+- 追问"工具权限"：当前工具只读本地索引，没有写操作、没有外网访问；要加写工具必须先做鉴权与审计。
+
+### Q33. MCP 你实现了哪一部分？为什么不全做？
+
+**一句话回答**：只实现 stdio + JSON-RPC 2.0 的 `initialize` / `tools/list` / `tools/call` / `ping`，因为项目只需要"工具发现 + 调用"闭环；resources/prompts/sampling 没有使用场景。
+
+**展开**：
+- `McpServer.handle()` 是纯函数：请求 → 响应，通知（无 id）返回 None；错误码用标准值（-32601 方法不存在、-32602 参数错、-32700 解析失败）；
+- `tools/call` 返回 `content[0].text`，未知工具返回 `isError=true` 而不是协议错误——让客户端能区分"协议没问题、工具失败"；
+- 客户端两种传输：`InProcessTransport`（测试直接调 handle）与 `StdioTransport`（子进程逐行 JSON），因此协议逻辑可以完全不依赖进程就测完；
+- 明确不做的能力写进 `docs/AGENT_MCP.md`，避免被问"你是不是只抄了个壳"时说不清。
+
+**代码位置**：`src/visioncite/mcp/protocol.py:21-120`（协议常量、传输、错误码），`src/visioncite/mcp/server.py:33-140`（方法分发），`src/visioncite/mcp/client.py:33-130`（客户端与子进程）
+
+**常见坑 / 追问**：
+- 坑：`McpClient.spawn()` 的子进程路径没进 CI（跨平台管道行为差异大），只验证了进程内路径；这是明确写在 LIMITATIONS 里的未覆盖项。
+- 追问"为什么不直接用官方 SDK"：协议很小，手写能讲清每个字段；代价是只覆盖子集，未来要接 resources 需要补实现或换 SDK。
+- 追问"工具结果很大怎么办"：当前直接塞 JSON 文本，没有分页/截断策略；`search_document` 限制 `top_k<=10` 是唯一的规模控制。
+

@@ -281,3 +281,37 @@
 1. 不看代码，画出 `build_document()` → `answer_question()` 的完整调用链，标注每步的输入输出类型。
 2. 挑一条 `reports/` 里的逐样本记录，用 `eval/metrics.py` 的函数手工复算它的 `contains`、`f1`、`cite_hit`，看能不能对上。
 3. 把 `docs/EXERCISES.md` 里任意一个练习做掉，并用 `python -m pytest -q` 与一次 `python -m visioncite.eval.run --mode layout --per 2` 验证"没有把别的东西弄坏"。
+
+---
+
+## 第 9 站（v0.2）agent / tools / llm / mcp：让模型自己查
+
+### 读哪些文件
+
+- `src/visioncite/llm/base.py`、`src/visioncite/llm/fake.py`（先读 fake，最直观）
+- `src/visioncite/tools/base.py`、`src/visioncite/tools/document_tools.py`
+- `src/visioncite/agent/loop.py`（全文件，约 200 行）
+- `src/visioncite/mcp/protocol.py`、`server.py`、`client.py`
+- `tests/test_llm.py`、`tests/test_tools.py`、`tests/test_agent.py`、`tests/test_mcp.py`
+
+阅读顺序建议：`fake.py` → `tools/base.py` → `agent/loop.py` → `mcp/server.py`。
+先看 fake 是为了"知道模型会返回什么形状"，再看工具分发，最后看循环怎么把它们串起来。
+
+### 读完应能回答
+
+1. **一次 `run_agent()` 里，消息列表是怎么增长的？**
+   `system + user` 起步；每轮模型返回 tool_calls → 追加一条 assistant（含 tool_calls）→ 每个调用追加一条 `tool`（带 `tool_call_id` 与结果 JSON）；模型返回纯文本即终止。最多 `settings.agent_max_steps` 轮。
+
+2. **引用是怎么从"工具结果"变成 `Citation` 的？**
+   `_evidence_from(result)` 解析 JSON 取 `results[].chunk_id`，去重后 `document.chunk_by_id()` 回查；`_finalize()` 取前 3 条构造 `Citation`。没有工具证据就弃答，不进入校验。
+
+3. **同一套工具怎么同时给 Agent、HTTP、MCP 用？**
+   三处都只依赖 `ToolRegistry`：Agent 直接 `registry.call`；HTTP 的 `/api/agent` 复用 `build_document_tools`；MCP 把 `specs()` 转成 `inputSchema` 并在 `tools/call` 里调同一个 `call`。没有任何一处重写工具实现。
+
+### 关键设计决定
+
+- **不引框架**：循环只有"调模型 / 执行工具 / 回灌 / 终止"四步，自己写才能精确控制最大步数、错误回传与"引用只能来自工具"这条硬约束。
+- **fake 先行**：`FakeProvider` 让 CI 不依赖网络与 key，同时是"没有 key 也能演示"的开关；真实 provider 与它同接口。
+- **工具错误回给模型**：`registry.call` 捕获异常返回 `{"error": ...}`，模型可自行重试；只有协议层错误才中断。
+- **MCP 手写子集**：`handle()` 是纯函数，`InProcessTransport` 让协议测试不需要子进程；`spawn()` 单独留给真实宿主。
+- **降级仍在**：模型异常 → `_fallback()` 调 `answer_question`，接口不失败；这与 v0.1 的"缺 OCR/CLIP/VLM 逐级降级"是同一条原则。
