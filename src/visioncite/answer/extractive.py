@@ -113,15 +113,33 @@ def rank_candidates(question: str, evidence: list[Chunk]) -> list[Candidate]:
         候选句列表，按分数降序。
     """
     terms = query_terms(question)
+    wants_number = _asks_number(question)
     candidates: list[Candidate] = []
     for chunk in evidence:
         for sentence in _sentences(chunk.text):
             score, coverage = score_sentence(sentence, terms)
             if score <= 0:
                 continue
+            # 问"多少/几档/多久"时，带数字的句子更可能是答案；
+            # 标题类短句（如"空调温度设置"）不含数字，不应压过正文。
+            if wants_number and any(char.isdigit() for char in sentence):
+                score = min(1.0, score * 1.15 + 0.05)
             candidates.append(Candidate(text=sentence, chunk=chunk, score=score, coverage=coverage))
     candidates.sort(key=lambda item: item.score, reverse=True)
     return candidates
+
+
+def _asks_number(question: str) -> bool:
+    """问题是否在要一个数量/数值。
+
+    Args:
+        question: 用户问题。
+
+    Returns:
+        True 表示应偏好带数字的句子。
+    """
+    markers = ("多少", "几档", "几组", "几个", "几台", "几次", "多久", "多大", "多长", "百分比")
+    return any(marker in question for marker in markers)
 
 
 def _sentences(text: str) -> list[str]:
@@ -203,7 +221,11 @@ def _cited_chunks(best: Candidate, candidates: list[Candidate]) -> list[Chunk]:
     """
     cited = [best.chunk]
     for candidate in candidates[1:]:
-        if candidate.chunk.chunk_id != best.chunk.chunk_id:
+        # 第二条引用只在"分数接近"时才加：差距大时它多半是无关块，
+        # 带上只会拉低引用精确率（评测里 Cite-P 的主要损失来源）。
+        if candidate.chunk.chunk_id == best.chunk.chunk_id:
+            continue
+        if candidate.score >= best.score * 0.85:
             cited.append(candidate.chunk)
-            break
+        break
     return cited

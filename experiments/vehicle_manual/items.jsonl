@@ -1,0 +1,28 @@
+{"id": "p1-q0", "file": "images/page-01.png", "question": "空调滤芯多久更换一次？", "answer": "空调滤芯建议每 12 个月或 2 万公里更换一次。", "citation": [70, 409, 593, 435], "answerable": true, "category": "manual"}
+{"id": "p1-q1", "file": "images/page-01.png", "question": "制冷剂是什么型号？", "answer": "制冷剂型号为 R134a，加注量请参考保养手册。", "citation": [70, 331, 602, 358], "answerable": true, "category": "manual"}
+{"id": "p2-q0", "file": "images/page-02.png", "question": "空调温度可以调到多少度？", "answer": "温度可在 16 摄氏度到 32 摄氏度之间调节，步进 0.5 度。", "citation": [70, 176, 708, 201], "answerable": true, "category": "manual"}
+{"id": "p2-q1", "file": "images/page-02.png", "question": "SYNC 键有什么用？", "answer": "同步模式 SYNC 可让副驾温度跟随主驾设置。", "citation": [70, 410, 575, 435], "answerable": true, "category": "manual"}
+{"id": "p3-q0", "file": "images/page-03.png", "question": "风量最大是几档？", "answer": "风量共 7 档，第 7 档为最大风量。", "citation": [70, 176, 453, 201], "answerable": true, "category": "manual"}
+{"id": "p3-q1", "file": "images/page-03.png", "question": "后风挡除霜多久自动关闭？", "answer": "后风挡除霜由电加热丝完成，10 分钟后自动关闭。", "citation": [70, 332, 632, 357], "answerable": true, "category": "manual"}
+{"id": "p4-q0", "file": "images/page-04.png", "question": "座椅加热有几档？", "answer": "主驾座椅加热分三档，开启后约 3 分钟达到设定温度。", "citation": [70, 176, 674, 201], "answerable": true, "category": "manual"}
+{"id": "p4-q1", "file": "images/page-04.png", "question": "座椅记忆可以保存几组坐姿？", "answer": "座椅记忆功能可保存两组坐姿，按键位于门板。", "citation": [70, 332, 595, 357], "answerable": true, "category": "manual"}
+{"id": "p5-q0", "file": "images/page-05.png", "question": "车窗防夹触发后会怎样？", "answer": "防夹功能触发后，车窗会自动下降约 10 厘米。", "citation": [70, 332, 589, 357], "answerable": true, "category": "manual"}
+{"id": "p5-q1", "file": "images/page-05.png", "question": "车速多少时天窗会自动减小开度？", "answer": "车速超过 80 公里每小时时，天窗会自动减小开度。", "citation": [70, 410, 639, 435], "answerable": true, "category": "manual"}
+{"id": "p6-q0", "file": "images/page-06.png", "question": "雾灯在什么前提下才能打开？", "answer": "雾灯需要在大灯开启的前提下才能打开。", "citation": [70, 254, 520, 279], "answerable": true, "category": "manual"}
+{"id": "p6-q1", "file": "images/page-06.png", "question": "离家照明延时多久？", "answer": "离家照明功能可在大灯关闭后延时 30 秒熄灭。", "citation": [70, 410, 589, 435], "answerable": true, "category": "manual"}
+{"id": "p7-q0", "file": "images/page-07.png", "question": "离线地图多久更新一次？", "answer": "离线地图每季度更新一次，可在设置中手动检查。", "citation": [70, 254, 620, 279], "answerable": true, "category": "manual"}
+{"id": "p7-q1", "file": "images/page-07.png", "question": "导航语音音量可以单独调吗？", "answer": "导航语音提示音量可独立于媒体音量调节。", "citation": [70, 331, 545, 357], "answerable": true, "category": "manual"}
+{"id": "p8-q0", "file": "images/page-08.png", "question": "蓝牙最多能保存几台设备？", "answer": "蓝牙配对最多可保存 8 台设备，同时连接 2 台。", "citation": [70, 176, 603, 201], "answerable": true, "category": "manual"}
+{"id": "p8-q1", "file": "images/page-08.png", "question": "U 盘最大支持多大容量？", "answer": "USB 接口支持最大 64GB 的 U 盘。", "citation": [70, 331, 463, 356], "answerable": true, "category": "manual"}
+{"id": "p9-q0", "file": "images/page-09.png", "question": "自适应巡航的启用速度范围是多少？", "answer": "自适应巡航可在 30 到 150 公里每小时之间启用。", "citation": [70, 175, 623, 201], "answerable": true, "category": "manual"}
+{"id": "p9-q1", "file": "images/page-09.png", "question": "车道保持辅助在多少时速以上激活？", "answer": "车道保持辅助在车速高于 60 公里每小时时激活。", "citation": [70, 254, 614, 279], "answerable": true, "category": "manual"}
+{"id": "p10-q0", "file": "images/page-10.png", "question": "快充从 30% 到 80% 需要多久？", "answer": "快充从 30% 充到 80% 约需 30 分钟。", "citation": [70, 254, 496, 279], "answerable": true, "category": "manual"}
+{"id": "p10-q1", "file": "images/page-10.png", "question": "长期停放建议电量保持多少？", "answer": "长期停放时建议保持电量在 50% 左右。", "citation": [70, 409, 511, 434], "answerable": true, "category": "manual"}
+{"id": "p11-q0", "file": "images/page-11.png", "question": "首保的时间和里程是多少？", "answer": "首保为购车后 6 个月或 5000 公里，以先到者为准。", "citation": [70, 176, 648, 201], "answerable": true, "category": "manual"}
+{"id": "p11-q1", "file": "images/page-11.png", "question": "制动液多久更换一次？", "answer": "制动液每 2 年更换一次。", "citation": [70, 332, 349, 356], "answerable": true, "category": "manual"}
+{"id": "p12-q0", "file": "images/page-12.png", "question": "黄色故障灯代表什么？", "answer": "黄色故障灯表示需要尽快检查，可继续低速行驶。", "citation": [70, 254, 620, 279], "answerable": true, "category": "manual"}
+{"id": "p12-q1", "file": "images/page-12.png", "question": "紧急救援按键需要长按多久？", "answer": "紧急情况下可长按 SOS 按键 3 秒呼叫救援。", "citation": [70, 410, 561, 435], "answerable": true, "category": "manual"}
+{"id": "u0", "file": "images/page-01.png", "question": "这辆车的后备箱容积是多少升？", "answer": "", "citation": null, "answerable": false, "category": "manual"}
+{"id": "u1", "file": "images/page-01.png", "question": "车辆支持哪些 OTA 升级内容？", "answer": "", "citation": null, "answerable": false, "category": "manual"}
+{"id": "u2", "file": "images/page-01.png", "question": "轮胎的推荐胎压是多少？", "answer": "", "citation": null, "answerable": false, "category": "manual"}
+{"id": "u3", "file": "images/page-01.png", "question": "车载音响有几个扬声器？", "answer": "", "citation": null, "answerable": false, "category": "manual"}

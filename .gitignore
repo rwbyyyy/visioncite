@@ -39,3 +39,8 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# 实验生成的语料图片与训练产物（可重新生成）
+experiments/*/images/
+experiments/vehicle_sft/lora-out/
+
